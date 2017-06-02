@@ -1,0 +1,43 @@
+.data
+
+.text
+
+.globl main
+
+main:
+
+	addi $v0, $0, 5
+	syscall     		#PRENDI IN INPUT IL VALORE SCELTO DALL'UTENTE
+	move $s2 $v0
+
+first_procedure:
+
+	li $s0 0
+	
+	beq $s1 $s2 return
+
+	mult $s0 $s0
+	mflo $s0
+
+	jal second_procedure
+
+	add $s0 $s0 $s3
+	addi $s1 $s1 1
+
+return:
+
+	#stampa a schermo il valore di s3
+	jr $ra
+
+second_procedure:
+
+	li $t0 0
+	bne $t0 $s2 proceed_second
+	li $s3 1
+	jr $ra
+
+proceed_second:
+
+	li $t1 2
+	mult
+	jr $ra

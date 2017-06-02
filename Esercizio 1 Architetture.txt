@@ -1,0 +1,178 @@
+# I ESERCIZIO: Analisi di Stringhe
+
+# AUTORI: Badini 		Francesco 			francesco.badini@stud.unifi.it			Matricola: 5769431
+#         Bartolini     Matteo              matteo.bartolini6@stud.unifi.it         Matricola: 5970309
+#		  Calabrese     Filippo             filippo.calabrese@stud.unifi.it         Matricola: 5826217
+
+# DATA DI CONSEGNA: 04/06/2017
+
+################# Data segment #####################
+
+.data
+string: .space 408
+question: .asciiz "Inserire una stringa di al massimo 100 caratteri della quale verranno riconosciute le esatte sequenze uno, due, nove. 
+Sequenze differenti verranno segnalate con un punto interrogativo. \n \n"
+uno: .asciiz "1 "
+due: .asciiz "2 "
+nove: .asciiz "9 "
+interrogative: .asciiz "? "
+
+################# Code segment #####################
+
+.text
+
+.globl main
+main:
+	
+	jal analisiDiStringhe	# Salto al priogramma
+	li $v0, 10				# Chiamata di Uscita
+	syscall
+
+
+analisiDiStringhe:
+
+################ Lettura della Stringa da Tastiera ##############
+
+	la $a0, question	    # Stampa a schermo la stringa con la consegna
+	li $v0, 4		        #
+	syscall                 #
+
+	la $a0, string 			# carico in $a0 l’indirizzo del buffer che conterra' la stringa
+	li $a1, 102 			# leggo da terminale 100 caratteri
+	li $v0, 8 				# codice leggi stringa = 8
+	syscall 				# legge la stringa e la memorizza all’indirizzo string
+
+##################### Analisi Stringa ######################
+
+start:
+	la $t0, string			# Salva in t0 l'indice del primo carattere della stringa
+	move $s0, $t0			# Lo sposta in s0, che sarà il puntatore alla stringa fino alla fine del programma
+	j chooseOp
+	
+increase:					# Label necessaria per consentire di tornare a "chooseOp" permettendo di scegliere  se incrementare o meno l'indice
+	addi $s0, 1				# Aumenta di 1 l'indice e passa al blocco successivo
+
+chooseOp:					# Confronta il carattere della stringa puntato da $s0 e decide cosa fare
+	lb $t0, ($s0)			# Carica in $t0 il carattere della stringa puntato da $s0
+	
+	li $t1, ' '				# Se e' uno spazio salta a "increase" per aumentare l'indice e controllare il successivo carattere
+	beq $t0, $t1, increase	# 
+	
+	li $t1, 'u'				# Se e' una "u" salta alla verifica della sottostringa "uno"
+	beq $t0, $t1, ver1		#
+	
+	li $t1, 'd'				# Se e' una "d" salta alla verifica della sottostringa "due"
+	beq $t0, $t1, ver2		#
+	
+	li $t1, 'n'          	# # Se e' una "n" salta alla verifica della sottostringa "nove"
+	beq $t0, $t1, ver9		# 
+	
+	li $t1, 10             	# Se e' un "10" allora salta alla procedura di fine programma
+	beq $t0, $t1, exit		# 
+
+findEnd:					# Cerca il primo spazio contenente uno spazio o la fine della stringa e ci si posiziona
+	lb $t0, 1($s0)			# Carica in $t0 il carattere della stringa successivo a quello puntato da $s0
+
+	li $t1, ' '				# Se e' uno spazio salta alla stampa del punto interrogativo
+	beq $t0, $t1, printInt	# 
+	
+	li $t1, 10				# Anche se la parola appena letta è l'ultima della stringa salta alla stampa del punto interrogativo
+	beq $t0, $t1, printInt	# 
+	
+	addi $s0, 1				# Se la sottostringa attualmente esaminata ancora non  e' terminata aumenta il ocntatore di 1 e riparte
+	j findEnd				# 
+
+ver1:						# Controlla che l'esatta sequenza che segue la "u" sia "no"
+	lb $t0, 1($s0)			# Carica in $t0 il carattere della stringa successivo a quello puntato da $s0
+	li $t1, 'n'				# 
+	bne $t0, $t1, findEnd	# Se e' il carattere caricato non e' una "n" non ho la sequenza desiderata e salto alla procedura che scorre fino a fine parola
+	addi $s0, 1				# Se invece per adesso la sequenza e' corretta incremento l'indice di 1
+	
+	lb $t0, 1($s0)			# Carica in $t0 il carattere della stringa successivo a quello puntato da $s0
+	li $t1, 'o'				# Se e' il carattere caricato non e' una "o" non ho la sequenza desiderata e salto alla procedura che scorre fino a fine parola
+	bne $t0, $t1, findEnd	# 
+	addi $s0, 1				# Se invece la sequenza e' corretta, incremento l'indice
+	
+	lb $t0, 1($s0)			# Verifico quindi che la sequenza termini con uno spazio o con il carattere di fine stringa,
+	li $t1, ' '				# 
+	beq $t0, $t1, print1	# 
+
+	lb $t0, 1($s0)			# 
+	li $t1, 10				# 
+	bne $t0, $t1, findEnd	# Se così non e' devo purtroppo stampare un punto interrogativo e scorrere fino a fine parola
+
+print1:						#
+	la $a0, uno				# Se sono giunto fin qui la sequenza letta è quindi corretta e procedo alla stampa della stringa '1 '
+	li $v0, 4				# 
+	syscall					# 
+
+	j increase				# Salto incondizionato alla procedura "chooseOp" con incremento dell'indice
+
+ver2:						#
+	lb $t0, 1($s0)			# Carica in $t0 il carattere della stringa successivo a quello puntato da $s0
+	li $t1, 'u'				# Analogamente a quanto fatto nella verifica della stringa "uno" controllo uno ad uno
+	bne $t0, $t1, findEnd	# I caratteri saltando a "findEnd" e conseguente stampa del punto interrogativo nel caso in cui
+	addi $s0, 1             # La stringa risulti in qualche modo diversa da quanto atteso
+	
+	lb $t0, 1($s0)			#
+	li $t1, 'e'				#
+	bne $t0, $t1, findEnd   #
+	addi $s0, 1             #
+	
+	lb $t0, 1($s0)			#
+	li $t1, ' '				#
+	beq $t0, $t1, print2	#
+
+	lb $t0, 1($s0)			#
+	li $t1, 10				#
+	bne $t0, $t1, findEnd	#
+
+print2:						# Stampa della stringa "2 " senza ulteriori controlli
+	la $a0, due	            #
+	li $v0, 4		        #
+	syscall                 #
+
+	j increase              # Salto incondizionato alla procedura "chooseOp" con incremento dell'indice
+
+ver9:						# Esattamente come nelle procedure precedenti controlla uno ad uno i vari caratteri che
+	lb $t0, 1($s0)			# Seguono il carattere "n" e in ogni caso in cui la stringa "nove" non viene rispettata
+	li $t1, 'o'             # Viene eseguito un salto incondizionato alla procedura di ricerca del primo spazio vuoto
+	bne $t0, $t1, findEnd   # Con conseguente stampa della stringa "? "
+	addi $s0, 1             # 
+
+	lb $t0, 1($s0)			# 
+	li $t1, 'v'				# 
+	bne $t0, $t1, findEnd   # 
+	addi $s0, 1             # 
+
+	lb $t0, 1($s0)			# 
+	li $t1, 'e'				# 
+	bne $t0, $t1, findEnd   # 
+	addi $s0, 1             # 
+
+	lb $t0, 1($s0)			# 
+	li $t1, ' '				# 
+	beq $t0, $t1, print9	# 
+
+	lb $t0, 1($s0)			# 
+	li $t1, 10				# 
+	bne $t0, $t1, findEnd	# 
+
+print9:						# Stampa della stringa "9 "
+	la $a0, nove	        #
+	li $v0, 4		        #
+	syscall                 #
+
+	j increase              # Salto incondizionato alla procedura "chooseOp" con incremento dell'indice
+	
+printInt:					# Procedura che si occupa della stampa della stringa "? "
+	la $a0, interrogative   #
+	li $v0, 4	            #
+	syscall		            #
+	
+	j increase				# Salto incondizionato alla procedura "chooseOp" con incremento dell'indice
+
+############## Uscita dal Programma #################
+
+exit:
+	jr $ra	# torno al chiamante
