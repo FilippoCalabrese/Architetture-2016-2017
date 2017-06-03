@@ -1,0 +1,274 @@
+# II ESERCIZIO: Procedure Annidate e Ricorsive
+
+# AUTORI: Badini 		Francesco 			francesco.badini@stud.unifi.it			Matricola: 5769431
+#		  Calabrese     Filippo             filippo.calabrese@stud.unifi.it         Matricola: 5826217
+
+# DATA DI CONSEGNA: 04/06/2017
+
+################# Data segment #####################
+
+.data
+
+tx: .asciiz "Inserire un intero compreso tra 1 e 8 (estremi inclusi)\n"			# tx -> Text
+g0: .asciiz "Valore restituito dalla procedura: G("								# g0 -> Stringa iniziale della funzione G
+tr: .asciiz "Traccia: \n"														# tr -> Traccia, striga di apertura della stampa a schermo dei passaggi
+g1: .asciiz "G"																	# g1 -> Frammento della stringa di output: G
+f1: .asciiz "F"																	# f1 -> Frammento della stringa di output: F
+ar: .asciiz " --> "																# ar -> Frammento della stringa di output: arrow
+p1: .asciiz "("																	# p1 -> Frammento della stringa di output: parantesi aperta
+p2: .asciiz ")"																	# p2 -> Frammento della stringa di output: parentesi chiusa
+eq: .asciiz "="																	# eq -> Frammento della stringa di output: "equal"
+rt: .asciiz ":return"															# rt -> Frammento della stringa di output
+b1: .asciiz "\n"																# b1 -> Stringa per andare a capo  
+er: .asciiz "Il carattere inserito non rispetta le specifiche ! \n"				# er -> Stringa di errore
+of: .asciiz "Overflow, non e' possibile calcolare la funzione. \n "				# of -> Stringa di overflow
+
+################## Code segment #####################
+
+.text
+
+.globl main
+
+main:
+	jal procedureAnnidate	# Salto al programma
+	li $v0, 10				# Chiamata di Uscita
+	syscall
+
+procedureAnnidate:
+
+	addi $sp, $sp, -4   	# Alloca la memoria nella stack
+	sw $ra, ($sp)			# Salva l'indirizzo contenuto nel registro di ritorno
+
+	la $a0, tx				# Stampa stringa di dialogo con l'utente
+	li $v0, 4		        
+	syscall                 
+	
+	li $v0, 5 				# codice "leggi intero", memorizzato in $v0
+	syscall 				
+	
+	blt $v0, 1, printErr		# Controlla che il carattere non sia minore di uno, 
+	bgt $v0, 8, printErr        # maggiore di 8 e nel caso salta alla stampa della stringa di errore
+	bgt $v0, 4, printOverflow   # o che non sia un numero che mandi il programma in overflow ed anche in questo caso stampa
+	j proceed					# se il numero e' corretto e accettabile, prosegue
+
+printErr:
+	la $a0, er				# Stampa stringa di errore
+	li $v0, 4		        
+	syscall                 
+	j exit					# Salta alla chiusura del programma
+
+printOverflow:
+	la $a0, of				# Stampa stringa di overflow
+	li $v0, 4		        
+	syscall                 
+	j exit					# Salta alla chiusura del programma
+	
+proceed:	
+	addi $sp, $sp, -4   	# Alloca la memoria nella stack
+	sw $v0, ($sp)			# e salva il registro v0 contenente il valore inserito dall'utente
+
+	move $a0, $v0			# sposto il valore n in $a0 per la chiamata a procedura
+	jal procedureG			# jump-and-link alla procedura G
+
+	lw $t1, ($sp)   		# recupero il valore n originale e dealloco
+	addi $sp, $sp, 4			
+	
+	move $t0, $v0			# metto in $t0 il valore finale passato dalla procedura G
+	
+	la $a0, g0				# Stampa stringa "Valore restituito dalla procedura: G("
+	li $v0, 4		        
+	syscall                 
+	
+	move $a0, $t1			# stampa del valore n originario
+	li $v0, 1 			
+	syscall 
+
+	la $a0, p2				# Stampa ")"
+	li $v0, 4		        
+	syscall                 
+	
+	la $a0, eq				# Stampa "="
+	li $v0, 4		        
+	syscall                 	
+
+	move $a0, $t0			# Stampa il valore di output della funzione G
+	li $v0, 1 			
+	syscall 		
+
+	la $a0, b1				# Stampa "\n" e va a capo
+	li $v0, 4		        
+	syscall                 
+
+exit:	
+	lw $ra, ($sp)   		# recupera il registro di ritorno e dealloca la memoria dalla stack
+	addi $sp, $sp, 4		
+	jr $ra					# Esegue una jump Register all'indirizzo contenuto in $ra
+
+	
+############################# Procedura G(n) ###############################
+
+procedureG:
+	addi $sp, $sp, -4   	# Alloca la memoria nella stack
+	sw $ra, ($sp)			# Salva l'indirizzo contenuto nel registro di ritorno
+
+	li $t0, 0				# $t0 e' b = 0
+	li $t1, 0				# $t1 e' k = 0
+	move $t2, $a0 			# $t2 e' n
+
+	la $a0, tr				# Stampa la stringa di apertura delle chiamate ricorsive
+	li $v0, 4		        
+	syscall                 
+	
+	la $a0, g1				# Stampa "G"
+	li $v0, 4		        
+	syscall                 	
+
+	la $a0, p1				# Stampa "("
+	li $v0, 4		        
+	syscall                 
+	
+	move $a0, $t2			# Stampa il valore n (inalterato rispetto a quello passato dall'utente)
+	li $v0, 1 			
+	syscall
+
+	la $a0, p2				# Stampa ")"
+	li $v0, 4		        
+	syscall
+	
+	la $a0, ar				# Stampa " --> "
+	li $v0, 4		        
+	syscall                 
+	
+cicloG:
+	bgt $t1, $t2, endG		# inizio del ciclo. se k > n esce, altrimenti continua
+	
+	addi $sp, $sp, -12   	# Alloca la memoria nella stack per i tre valori b, k e n
+	sw $t0, 0($sp)			# Salva b in stack
+	sw $t1, 4($sp)			# Salva k in stack
+	sw $t2, 8($sp)			# Salva n in stack
+	
+	move $a0, $t1			# sposta k in $a0 per la chiamata a procedura
+	jal procedureF			# invoca il metodo F con argomento k
+	
+	lw $t2, 8($sp)   		# recupera n dalla stack
+	lw $t1, 4($sp)   		# recupera k dalla stack
+	lw $t0, 0($sp)   		# recupera b dalla stack
+	addi $sp, $sp, 12		# dealloca lo spazio appena letto
+
+	mult $t0, $t0			# moltiplica b per se stesso e lo mette in $lo
+	mflo $t0				# recupera $lo e lo sposta in b
+	add $t0, $t0, $v0		# somma l'output di F(k) a b
+	
+	addi $t1, 1				# incrementa il contatore k del ciclo di 1 e
+	j cicloG				# torna all'inizio del ciclo
+	
+endG:
+
+	la $a0, g1				# Stampa "G"
+	li $v0, 4		        
+	syscall
+
+	la $a0, rt				# Stampa ":return"
+	li $v0, 4		        
+	syscall
+
+	la $a0, p1				# Stampa "("
+	li $v0, 4		        
+	syscall
+	
+	move $a0, $t0			# Stampa il valore finale di b
+	li $v0, 1 			
+	syscall	
+	
+	la $a0, p2				# Stampa ")"
+	li $v0, 4		        
+	syscall
+
+	la $a0, b1				# Stampa "\n" e va a capo
+	li $v0, 4		        
+	syscall
+	
+	move $v0, $t0			# sposti b nel registro di ritorno
+	lw $ra, ($sp)   		# recupera l'indirizzo di ritorno
+	addi $sp, $sp, 4		# dealloca lo spazio in stack
+	jr $ra					# Esegue una jump Register all'indirizzo contenuto nel registro $ra
+
+	
+################################## Procedura F(n) #############################
+
+procedureF:
+	addi $sp, $sp, -4   	# Alloca la memoria nella stack
+	sw $ra, ($sp)			# Salva l'indirizzo contenuto nel registro di ritorno
+
+	move $t0, $a0			# dovendo usare $a0 per stampare, sposta il valore n passato alla funzione in $t0
+	
+	la $a0, f1				# Stampa "F"
+	li $v0, 4		        
+	syscall	
+
+	la $a0, p1				# Stampa "("
+	li $v0, 4		        
+	syscall	
+	
+	move $a0, $t0			# Stampa il valore n passato alla funzione
+	li $v0, 1 			
+	syscall
+	
+	la $a0, p2				# Stampa ")"
+	li $v0, 4		        
+	syscall
+	
+	la $a0, ar				# Stampa " --> "
+	li $v0, 4		        
+	syscall
+	
+	move $a0, $t0			# rimette il valore n in $a0 leggendolo da $t0
+	
+	beq $a0, $0, return1	# se il valore passato e' uguale a 0 salta a "return1"
+	
+	addi $sp, $sp, -4   	# Alloca la memoria nella stack per salvare n
+	sw $a0, ($sp)			# Salva n
+	addi $a0, $a0, -1		# decrementa n di 1
+	
+	jal procedureF			# richiama se stesso di (n-1)
+	
+	lw $a0, ($sp)   		# dealloca la memoria dalla stack e prende n allocato prima di chiamare
+	addi $sp, $sp, 4		
+	add $v0, $v0, $v0		# prende il valore di ritorno e lo moltiplica per 2
+	add $t0, $v0, $a0		# lo somma al vecchio n e lo mette nel registro di ritorno
+	j endF
+	
+return1:	
+	li $t0, 1				# carica il valore 1 nel registro di ritorno
+
+endF:
+	
+	la $a0, f1				# Stampa "F"
+	li $v0, 4		        
+	syscall
+
+	la $a0, rt				# Stampa ":return"
+	li $v0, 4		        
+	syscall
+	
+	la $a0, p1				# Stampa "("
+	li $v0, 4		        
+	syscall	
+	
+	move $a0, $t0			# Stampa il valore finale restituito dalla procedura F
+	li $v0, 1 			
+	syscall
+	
+	la $a0, p2				# Stampa ")"
+	li $v0, 4		        
+	syscall
+
+	la $a0, ar				# Stampa " --> "
+	li $v0, 4		        
+	syscall
+	
+	move $v0, $t0			# mette il valore finale di F nel registro $v0 per il ritorno della procedura
+	
+	lw $ra, ($sp)   		# dealloca la memoria dalla stack ed esegue la chiamata di ritorno con l'indirizzo appena recuperato
+	addi $sp, $sp, 4		
+	jr $ra					# Esegue una jump Register all'indirizzo contenuto nell'apposito registro $ra
